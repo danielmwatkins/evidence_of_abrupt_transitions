@@ -276,8 +276,7 @@ for region in buoy_subsets:
         buoy_subsets[region][buoy]['u_tides'] = temp['u']
         buoy_subsets[region][buoy]['v_tides'] = temp['v']
 
-        
-      
+
 results = []
 for region in buoy_subsets:
     for buoy in buoy_subsets[region]:
@@ -294,4 +293,6 @@ for region in buoy_subsets:
         buoy_df.to_csv('../data/harmonic_fit/' + region + '/' + buoy + '_harmonic_fit.csv')
         
 df_r2 = pd.DataFrame(results, columns=['region', 'buoy', 'r2', 'U']).pivot_table(index='buoy', values='r2', columns='region')
-df_U = pd.DataFrame(results, columns=['region', 'buoy', 'r2', 'U']).pivot_table(index='buoy', values='U', columns='region')     
+df_U = pd.DataFrame(results, columns=['region', 'buoy', 'r2', 'U']).pivot_table(index='buoy', values='U', columns='region')
+df_r2.to_csv('../data/harmonic_fit/squared_correlation_coefficients.csv')
+df_U.to_csv('../data/harmonic_fit/maximum_daily_current.csv')

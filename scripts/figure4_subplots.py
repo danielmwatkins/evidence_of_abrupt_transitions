@@ -34,7 +34,7 @@ buoy_data = {file.split('.')[0]:
 
 ds_depth = xr.open_dataset('../data/interpolated_depth.nc')
 
-df_r2 = pd.read_csv('../data/harmonic_fit/correlation_coefficients.csv', index_col=0)
+df_r2 = pd.read_csv('../data/harmonic_fit/squared_correlation_coefficients.csv', index_col=0)
 df_U = pd.read_csv('../data/harmonic_fit/maximum_daily_current.csv', index_col=0)
 
 #### Gather tracks from regions
