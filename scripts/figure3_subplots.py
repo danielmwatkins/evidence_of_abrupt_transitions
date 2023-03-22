@@ -155,8 +155,8 @@ x = ax[1].hist2d(ft_df['wind_speed'], ft_df['drift_speed_ratio'], bins=[np.linsp
                                       np.linspace(0, 0.2, 100)],
          cmap='spectral_r')
 ax[0].axhline(0, color='k', lw=0.5)
-ax[0].format(ylabel='$\\Theta$', xlabel='$U_{wind}$', title='Ice Floe Tracker')
-ax[1].format(ylabel='$\\alpha$', xlabel='$U_{wind}$', title='Ice Floe Tracker')
+ax[0].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='Ice Floe Tracker')
+ax[1].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='Ice Floe Tracker')
 
 
 x = ax[2].hist2d(buoy_df['wind_speed'], buoy_df['turning_angle'], bins=[np.linspace(0, 15, 50),
@@ -166,6 +166,6 @@ x = ax[2].hist2d(buoy_df['wind_speed'], buoy_df['turning_angle'], bins=[np.linsp
 x = ax[3].hist2d(buoy_df['wind_speed'], buoy_df['drift_speed_ratio'], bins=[np.linspace(0, 15, 50),
                                       np.linspace(0, 0.2, 50)], density=True, cmap='spectral_r')
 ax[2].axhline(0, color='k', lw=0.5)
-ax[2].format(ylabel='$\\Theta$', xlabel='$U_{wind}$', title='MOSAiC')
-ax[3].format(ylabel='$\\alpha$', xlabel='$U_{wind}$', title='MOSAiC')
+ax[2].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='MOSAiC')
+ax[3].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='MOSAiC')
 fig.save('../figures/figure3_efgh.png', dpi=300)

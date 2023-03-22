@@ -163,7 +163,7 @@ ax[0].boxplot(df_r2.loc[:, ['NB', 'YP', 'GC', 'GS']], cycle=['gold', 'tab:cyan',
 ax[0].format(ylabel='$r^2$', xlabel='Region', ylim=(0,1), title='Coefficient of determination')
 
 ax[1].boxplot(df_U.loc[:, ['NB', 'YP', 'GC', 'GS']], cycle=['gold', 'tab:cyan', 'plum', 'lime8'])
-ax[1].format(ylabel='$U_{tide}$ (m/s)', xlabel='Region', ylim=(0,0.5), title='Maximum current',
-            suptitle='All tidal constituents')
+ax[1].format(ylabel='$U_{tide}$ (m/s)', xlabel='Region', ylim=(0,0.2),
+             title='Maximum current', ylocator=np.arange(0, 0.21, 0.04))
 
 fig.save('../figures/figure4_fg.png', dpi=300)

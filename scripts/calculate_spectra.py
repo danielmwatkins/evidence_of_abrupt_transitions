@@ -1,12 +1,9 @@
 """Use the University of Hawaii PyCurrents spectral analysis function to calculate rotary spectra and save the results in data/spectra."""
 
-from cartopy.feature import NaturalEarthFeature
-import cartopy.crs as ccrs
 import numpy as np
 import os
 import pandas as pd
-import proplot as pplt
-from pycurrents.num import spectra
+from pycurrents_spectra import spectrum
 
 def bathymetric_regions(buoy, buoy_data):
     """Returns bathymetric region based on the following criteria:
@@ -47,7 +44,7 @@ def get_spectral_df(buoy_data_subset, uvar='u', vvar='v'):
 
         
         #        lat = buoy_data[buoy].loc[ts, 'latitude'].median()
-        s = spectra.spectrum(U.dropna(), nfft=None, dt=1/24, 
+        s = spectrum(U.dropna(), nfft=None, dt=1/24, 
                              window='hanning',
                              smooth=3)
 

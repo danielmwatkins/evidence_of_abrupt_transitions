@@ -4,8 +4,7 @@ import os
 import pandas as pd
 import pyproj
 import sys
-#sys.path.append('../scripts/')
-import zhang_ellipse as ze
+from drifter import compute_velocity
 
 ### Parameters
 tc = pd.Series(
@@ -41,104 +40,7 @@ def bathymetric_regions(buoy, buoy_data):
     channel = channel & ~yermak
     return {'NB': nansen, 'YP': yermak, 'GC': channel, 'GS': shelf}
 
-def compute_velocity(buoy_df, date_index=True, rotate_uv=False, method='c'):
-    """Computes buoy velocity and (optional) rotates into north and east directions.
-    If x and y are not in the columns, projects lat/lon onto stereographic x/y prior
-    to calculating velocity. Rotate_uv moves the velocity into east/west. Velocity
-    calculations are done on the provided time index. Results will not necessarily 
-    be reliable if the time index is irregular. With centered differences, values
-    near endpoints are calculated as forward or backward differences.
-    
-    Options for method
-    forward (f): forward difference, one time step
-    backward (b): backward difference, one time step
-    centered (c): 3-point centered difference
-    forward_backward (fb): minimum of the forward and backward differences
-    """
-    buoy_df = buoy_df.copy()
-    
-    if date_index:
-        date = pd.Series(pd.to_datetime(buoy_df.index.values), index=pd.to_datetime(buoy_df.index))
-    else:
-        date = pd.to_datetime(buoy_df.date)
-        
-    delta_t_next = date.shift(-1) - date
-    delta_t_prior = date - date.shift(1)
-    min_dt = pd.DataFrame({'dtp': delta_t_prior, 'dtn': delta_t_next}).min(axis=1)
 
-    # bwd endpoint means the next expected obs is missing: last data before gap
-    bwd_endpoint = (delta_t_prior < delta_t_next) & (np.abs(delta_t_prior - delta_t_next) > 2*min_dt)
-    fwd_endpoint = (delta_t_prior > delta_t_next) & (np.abs(delta_t_prior - delta_t_next) > 2*min_dt)
-    
-    if 'x' not in buoy_df.columns:
-        projIn = 'epsg:4326' # WGS 84 Ellipsoid
-        projOut = 'epsg:3413' # NSIDC North Polar Stereographic
-        transformer = pyproj.Transformer.from_crs(projIn, projOut, always_xy=True)
-
-        lon = buoy_df.longitude.values
-        lat = buoy_df.latitude.values
-
-        x, y = transformer.transform(lon, lat)
-        buoy_df['x'] = x
-        buoy_df['y'] = y
-    
-    if method in ['f', 'forward']:
-        dt = (date.shift(-1) - date).dt.total_seconds().values
-        dxdt = (buoy_df['x'].shift(-1) - buoy_df['x'])/dt
-        dydt = (buoy_df['y'].shift(-1) - buoy_df['y'])/dt
-
-    elif method in ['b', 'backward']:
-        dt = (date - date.shift(1)).dt.total_seconds()
-        dxdt = (buoy_df['x'] - buoy_df['x'].shift(1))/dt
-        dydt = (buoy_df['y'] - buoy_df['y'].shift(1))/dt
-
-    elif method in ['c', 'fb', 'centered', 'forward_backward']:
-        fwd_df = compute_velocity(buoy_df.copy(), date_index=date_index, method='forward')
-        bwd_df = compute_velocity(buoy_df.copy(), date_index=date_index, method='backward')
-
-        fwd_dxdt, fwd_dydt = fwd_df['u'], fwd_df['v']
-        bwd_dxdt, bwd_dydt = bwd_df['u'], bwd_df['v']
-        
-        if method in ['c', 'centered']:
-            dt = (date.shift(-1) - date.shift(1)).dt.total_seconds()
-            dxdt = (buoy_df['x'].shift(-1) - buoy_df['x'].shift(1))/dt
-            dydt = (buoy_df['y'].shift(-1) - buoy_df['y'].shift(1))/dt
-        else:
-            dxdt = np.sign(bwd_dxdt)*np.abs(pd.DataFrame({'f': fwd_dxdt, 'b':bwd_dxdt})).min(axis=1)
-            dydt = np.sign(bwd_dxdt)*np.abs(pd.DataFrame({'f': fwd_dydt, 'b':bwd_dydt})).min(axis=1)
-
-        dxdt.loc[fwd_endpoint] = fwd_dxdt.loc[fwd_endpoint]
-        dxdt.loc[bwd_endpoint] = bwd_dxdt.loc[bwd_endpoint]
-        dydt.loc[fwd_endpoint] = fwd_dydt.loc[fwd_endpoint]
-        dydt.loc[bwd_endpoint] = bwd_dydt.loc[bwd_endpoint]
-    
-    if rotate_uv:
-        # Unit vectors
-        buoy_df['Nx'] = 1/np.sqrt(buoy_df['x']**2 + buoy_df['y']**2) * -buoy_df['x']
-        buoy_df['Ny'] = 1/np.sqrt(buoy_df['x']**2 + buoy_df['y']**2) * -buoy_df['y']
-        buoy_df['Ex'] = 1/np.sqrt(buoy_df['x']**2 + buoy_df['y']**2) * -buoy_df['y']
-        buoy_df['Ey'] = 1/np.sqrt(buoy_df['x']**2 + buoy_df['y']**2) * buoy_df['x']
-
-        buoy_df['u'] = buoy_df['Ex'] * dxdt + buoy_df['Ey'] * dydt
-        buoy_df['v'] = buoy_df['Nx'] * dxdt + buoy_df['Ny'] * dydt
-
-        # Calculate angle, then change to 360
-        heading = np.degrees(np.angle(buoy_df.u.values + 1j*buoy_df.v.values))
-        heading = (heading + 360) % 360
-        
-        # Shift to direction from north instead of direction from east
-        heading = 90 - heading
-        heading = (heading + 360) % 360
-        buoy_df['bearing'] = heading
-        buoy_df['speed'] = np.sqrt(buoy_df['u']**2 + buoy_df['v']**2)
-        buoy_df.drop(['Nx', 'Ny', 'Ex', 'Ey'], axis=1, inplace=True)
-        
-    else:
-        buoy_df['u'] = dxdt
-        buoy_df['v'] = dydt            
-        buoy_df['speed'] = np.sqrt(buoy_df['v']**2 + buoy_df['u']**2)    
-
-    return buoy_df
 
 # Coriolis frequency as a function of latitude
 f = lambda latitude: 2*2*np.pi/(24*3600)*np.sin(np.deg2rad(latitude))
@@ -245,7 +147,6 @@ def fit_harmonic_model(df_sel, xvar='x', yvar='y',
 
     # Initialize from random vector
     # Works OK for tides, but not for inertial oscillations
-    # Problem here is posibly that the phase is too rigid?
     xscale = np.diff(np.quantile(np.abs(Y),[0.25, 0.75]))
     x0 = np.random.normal(size=len(v))*xscale
     
@@ -277,38 +178,6 @@ def fit_harmonic_model(df_sel, xvar='x', yvar='y',
     x_fit = Y[0:n]
     y_fit = Y[n:]
     return beta, x_fit, y_fit, Z
-
-def get_ellipse_parameters(beta, tidal_constituents,
-                          xvar='x', yvar='y',
-                          reference_time=pd.to_datetime('2020-05-01 00:00')):
-    """Converts the numbers from the Pease et al. set up into the magnitude
-    and phase needed by the Zhange ellipse code, then computes the parameters.
-    beta should have indices A1x, A1y, B1x, B1y, etc.
-    """
-     
-    results = []
-    for tide in tidal_constituents.index:
-        w = tidal_constituents.loc[tide, 'cps']
-#         idx = str(tidal_constituents.loc[tide, 'idx'])
-        idx = tide
-        Ax = beta['A' + idx + 'x']*w
-        Ay = beta['A'+ idx + 'y']*w
-        Bx = beta['B' + idx + 'x']*w
-        By = beta['B' + idx + 'y']*w
-
-        au = np.sqrt(Ax**2 + Bx**2)
-        av = np.sqrt(Ay**2 + By**2)
-        phu = np.arctan2(Bx, Ax)
-        phv = np.arctan2(By, Ay)
-        SEMA, ECC, INC, PHA, w = ze.ap2ep(Au=au,
-                                   PHIu=phu,
-                                   Av=av,
-                                   PHIv=phv, plot_demo=False)
-
-        results.append([SEMA, ECC, INC, PHA])
-    return pd.DataFrame(results, index=tidal_constituents.index,
-                        columns=['SEMA', 'ECC', 'INC', 'PHA'])
-
 
 #### Read in data and separate into bathymetric regions
 dataloc = '../data/hourly_merged_buoy_data/'
@@ -364,7 +233,6 @@ buoy_subsets['GC'] = {b: buoy_subsets['GC'][b] for b in buoy_subsets['GC'] if \
 
 ellipse_params = {region: {} for region in buoy_subsets}
 tc_set = ['K1','O1', 'S2', 'M2', 'N2']
-#tc_set = ['S1', 'S2']
 for region in buoy_subsets:
     for buoy in buoy_subsets[region]:
         buoy_df = buoy_subsets[region][buoy].copy()
@@ -409,11 +277,7 @@ for region in buoy_subsets:
         buoy_subsets[region][buoy]['v_tides'] = temp['v']
 
         
-        
-        
-        ellipse_params[region][buoy] = get_ellipse_parameters(beta,
-                                                              tidal_constituents.loc[tc_set, :])
-        
+      
 results = []
 for region in buoy_subsets:
     for buoy in buoy_subsets[region]:
