@@ -1,21 +1,10 @@
-This folder contains the code and data used for the paper "Evidence of abrupt transitions between sea ice dynamical regimes in the East Greenland marginal ice zone". In the final version, we will include a list of package versions and instructions for setting up a conda environment to ensure reproducibility. 
+# Introduction
+This repository contains the code and data used for the paper "Evidence of abrupt transitions between sea ice dynamical regimes in the East Greenland marginal ice zone" by Watkins et al. This initial version contains all the code necessary to reproduce the results in the paper, *provided all the external datasets have been downloaded*. So that it is possible to review the analysis of the paper, I have separated the python scripts into code needed to prepare the data for analysis, and code needed to create the figures. The figure creation code can be run using only the data files provided in the repository. In a future version of the repository, more detailed instructions for obtaining the external datasets will be provided.
 
-The scripts used to prepare the data take a more complex Python environment and require the external datasets to be downloaded. The results of these scripts are saved in the folder data_for_analysis which includes subfolders for daily downsampled observations, hourly observations, Ice Floe Tracker observations,  spectra, and the results of the harmonic fit. The daily resolution data includes sea ice concentration, depth, and daily median wind speed interpolated to buoy positions and derived quantities. The hourly observations include derived quantities, depth, and the interpolated ERA5 winds.
+# Setup
+The files environment.yml and environment-tidal.yml provide the list of package versions used to run the script. After installing miniconda (instructions: https://docs.conda.io/en/latest/miniconda.html) create the miz_dynamics environment via
 
-Python version 3.9.13
-
-Python libraries used:
-- cartopy
-- h5py
-- netcdf4
-- numpy 1.23.3
-- proplot 0.9.5
-- pyproj 
-- pycurrents
-- pandas
-- scipy
-- rioxarray
-- xarray
+`conda env create --file miz_dynamics.yml`
 
 External datasets needed:
 - Buoy drift tracks from the Arctic Data Center
@@ -24,25 +13,21 @@ External datasets needed:
 - ERA5 hourly u10, v10 for the region bounded by 60-90 latitude and -30 to 30 longitude
 
 # Data preparation
-## clean_buoy_data.py
-Reads the MOSAiC buoy tracks downloaded from the Arctic Data Center, applies quality control, and resamples to hourly resolution.
+1. `clean_buoy_data.py` Reads the MOSAiC buoy tracks downloaded from the Arctic Data Center, applies quality control, and resamples to hourly resolution. Requires drift tracks and metadata from the Arctic Data Center. Results saved to `data/interpolated_tracks'.
+2. `clean_ft_data.py` Reads the CSV files with IFT floe positions, interpolates to daily resolution, interpolates ERA5 daily wind speeds to floe positions, and computes turning angle and drift speed ratios relative to the wind speeds. Results saved to `data/floe_tracker/interpolated` and `data/floe_tracker/ft_with_wind.csv`.
+3. `compile_amsr2_data.py` Reads daily hd5 files from NSIDC and merges them to a netcdf file for the merge_data code to access.
+4. `merge_data.py` Interpolates sea ice concentration, depth, and ERA5 winds to the buoy positions. Ice concentration and depth are added to the daily positions, and wind is added to the hourly positions. Calculates drift velocity using forward differences for the daily positions and using centered differences for the hourly positions. Results saved to `data/daily_merged_buoy_data` and `data/hourly_merged_buoy_data`. 
+5. `prepare_bathymetry_for_plotting.py`
+6. `calculate_spectra.py`
+7. `calculate_tidal_fit.py`
 
-## clean_ft_data.py
-Reads the CSV files with IFT floe positions, interpolates to daily resolution, computes turning angle and drift speed ratios.
+# Figure generation
+1. `figure1_subplots.py` Uses the merged buoy data, deformation time series, and the regridded IBCAO depths to create the components of Figure 1. These include the map with the buoy trajectories, the time series of drift speed, wind speed, SIC, buoy count, depth, and deformation, and the satellite imagery overlays.
+2. `figure2_subplots.py` Uses the merged buoy data to generate plots of drift speed magnitude, predicted drift speed based on the wind model, and time series and histograms of turning angle and drift speed ratio.
+3. `figure3_subplots.py` Uses the Floe Tracker data and the merged buoy data to show the Floe Tracker estimates of drift speed, direction, and variability, and the joint histograms of turning angle and drift speed ratio as a function of wind speed for Floe Tracker and for the MOSAiC buoys.
+4. `figure4_subplots.py` Uses the 
 
-## compile_amsr2_data.py
-Script to select AMSR2 data for the study region and merge it into a single smaller netcdf file (amsr2_sea_ice_concentration.nc). Only run this if recalculating sea ice concentration from the daily AMSR2 files.
-
-## merge_data.py
-Takes the ocean depth, winds, and sea ice concentration data, interpolates it to the buoy locations.
-
-## rotary_spectra.py
-Reads the files in data/buoy_data_for_analysis and applies the PyCurrents spectra function, then plots the results.
-TBD split this function into calculating spectra and plotting
-
-# Figure creation
-## figure1_subplots.py
-Uses the merged buoy data, deformation time series, and the regridded IBCAO depths to create the components of Figure 1. These include the map with the buoy trajectories, the time series of drift speed, wind speed, SIC, buoy count, depth, and deformation, and the satellite imagery overlays.
-
-## figure2_subplots.py
-Uses the merged buoy data to 
+# Supporting modules
+1. `spectra.py` Code from the University of Hawaii PyCurrents package used to calculate rotary power spectra.
+2. `zhang_ellipse.py` Pierre Cazenave's Python implementation of Zhigang 
+3. `drifter.py` Helper functions used for calculating drift speed and buoy trajectory quality control
