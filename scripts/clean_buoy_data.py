@@ -23,15 +23,15 @@ for file in files:
     if 'V' in buoy:
         df.index = df.index - pd.to_timedelta('8H')
 
-    df_qc = standard_qcstandard_qc(buoy_df,
-                                    min_size=100,
-                                    gap_threshold='6H',                
-                                    segment_length=24,
-                                    lon_range=(-180, 180),
-                                    lat_range=(65, 90),
-                                    max_speed=1.5,
-                                    speed_window='3D',
-                                    verbose=False)
+    df_qc = standard_qc(buoy_df,
+                        min_size=100,
+                        gap_threshold='6H',                
+                        segment_length=24,
+                        lon_range=(-180, 180),
+                        lat_range=(65, 90),
+                        max_speed=1.5,
+                        speed_window='3D',
+                        verbose=False)
 
     # Interpolate to hourly
     if df_qc is not None:
