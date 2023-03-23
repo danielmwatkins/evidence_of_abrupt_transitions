@@ -1,4 +1,4 @@
-name: miz_dynamics_test
+name: miz_dynamics
 channels:
   - conda-forge
   - defaults
@@ -16,4 +16,4 @@ dependencies:
   - rioxarray=0.13.4=pyhd8ed1ab_0
   - scipy=1.10.1=py39h18313fe_0
   - xarray=2023.2.0=pyhd8ed1ab_0
-prefix: /opt/miniconda3/envs/miz_dynamics_test
+prefix: /opt/miniconda3/envs/miz_dynamics
