@@ -57,15 +57,26 @@ for buoy in extended_dn:
     ax.plot(buoy_data_hourly[buoy].longitude,
            buoy_data_hourly[buoy].latitude, color='gold', lw=1, alpha=0.75, zorder=2)
 
+last_date = {}
+for buoy in buoy_data:
+    sic = buoy_data[buoy].sea_ice_concentration
+    last = sic[sic > 1].index[-1]
+    last_date[buoy] = last
+
 
 for buoy in dn:
     buoy_df = buoy_data_hourly[buoy].resample('1H').asfreq()
+    sic = buoy_data[buoy].sea_ice_concentration
+    last = sic[sic > 1].index[-1]
+    ts_ice = slice('2020-05-01', last)
+    buoy_df = buoy_df.loc[ts_ice]
+
     ax.plot(buoy_df.longitude,
            buoy_df.latitude, color='r', lw=1, alpha=0.3, zorder=3)
 
     if buoy == plot_buoy:
         sic = buoy_data[buoy].sea_ice_concentration
-        last = sic[sic > 0].index[-1]
+        last = sic[sic > 1].index[-1]
         ts_ice = slice('2020-05-01', last)
         ts_water = slice(last + pd.to_timedelta('12H'), '2020-09-01 00:00')
         ax.plot(buoy_data_hourly[buoy].longitude.loc[ts_ice],
@@ -78,15 +89,15 @@ for buoy in dn:
         buoy_data_hourly[buoy] = buoy_data_hourly[buoy].loc[ts_ice].copy()
         buoy_data[buoy] = buoy_data[buoy].loc[ts_ice].copy()        
         
-for m, c in zip([5, 6, 7, 8, 9], colors):
-    date = pd.to_datetime('2020-' + str(m).zfill(2) + '-01 00:00')
+for m, c in zip([5, 6, 7, 8], colors):
+    date = pd.to_datetime('2020-' + str(m).zfill(2) + '-01 12:00')
     if date in buoy_data[plot_buoy].index:
         ax.plot(buoy_data[plot_buoy].loc[date, 'longitude'],
                 buoy_data[plot_buoy].loc[date, 'latitude'], c=colors[c],
                 marker='o', lw=0, edgecolor='k', s=5, zorder=6)
 
-h = [ax.plot([],[], c=colors[c], marker='o', lw=0, edgecolor='k') for c in colors]
-l = [c[0:3] + ' 1st' for c in colors]
+h = [ax.plot([],[], c=colors[c], marker='o', lw=0, edgecolor='k') for c in colors if c[0] != 'S']
+l = [c[0:3] + ' 1st' for c in colors if c[0] != 'S']
 ax.legend(h, l, ncols=1, loc='lr', pad=1, alpha=1)
 
 h = [ax.plot([],[], c='light gray', lw=2.5,
@@ -96,7 +107,7 @@ h = [ax.plot([],[], c='light gray', lw=2.5,
 l = ['CO (' + plot_buoy + ')', 'DN (init<60 km)', 'Ext. DN (init>60 km)']
 ax.legend(h, l, ncols=1, loc='ul', pad=1, alpha=1)
 
-        
+
 ax.colorbar(cbar, label='Depth (m)', loc='b')
 fig.save('../figures/figure1_k.png', dpi=300)
 
@@ -119,7 +130,7 @@ wind_speed_df = get_df_hourly('speed_wind').resample('1D').median()
 fig, axs = pplt.subplots(width=8, height=5, nrows=7,
                          sharey=False, hspace=[0,0,0,0,1,0])
 
-timeslice = slice('2020-05-01', '2020-08-31')
+timeslice = slice('2020-05-01', '2020-09-01')
 ws_median = wind_speed_df[dn].resample('1D').median().loc[timeslice]
 u_median = speed_df[dn].resample('1D').median().loc[timeslice]
 
@@ -277,9 +288,11 @@ lat_y = list(np.array(lat_y))
 lat_labels = [str(x) + '$^\circ$' for x in lat_labels]
 lon_labels = [str(x) + '$^\circ$' for x in lon_labels]
 lon_x = list(np.array(lon_x))
-
-df_lon = pd.DataFrame({buoy: buoy_data[buoy]['longitude'] for buoy in buoy_data})
-df_lat = pd.DataFrame({buoy: buoy_data[buoy]['latitude'] for buoy in buoy_data})
+start = '2020-05-01 00:00' 
+df_lon = pd.DataFrame({buoy: buoy_data[buoy]['longitude'].loc[slice(start, last_date[buoy])] for buoy in buoy_data})
+df_lat = pd.DataFrame({buoy: buoy_data[buoy]['latitude'].loc[slice(start, last_date[buoy])] for buoy in buoy_data})
+df_lon.index = df_lon.index - pd.to_timedelta('12H') # Set origin at 0 for plotting
+df_lat.index = df_lat.index - pd.to_timedelta('12H')
 
 pplt.rc['reso'] = 'med' 
 files = ['2020-07-12T00_00_00Z.tiff',
@@ -306,6 +319,13 @@ for ax, file in zip(axs, files):
     idx = df_x.loc[date,:] > X.min()
     idx = idx & (df_y.loc[date, :] > Y.min())
     ax.scatter(df_x.loc[date,idx], df_y.loc[date,idx], s=5, color='r')
+
+    ex_dn = [b for b in df_x.columns if b in extended_dn]
+    idx = df_x.loc[date,ex_dn] > X.min()
+    idx = idx & (df_y.loc[date, ex_dn] > Y.min())
+    ax.scatter(df_x.loc[date,ex_dn][idx], df_y.loc[date,ex_dn][idx], s=5, color='gold')
+
+
     ax.scatter(df_x.loc[date, '2020P225'], df_y.loc[date, '2020P225'], marker='*',
                c='light blue', edgecolor='k', s=150)
     

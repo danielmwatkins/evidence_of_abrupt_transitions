@@ -58,94 +58,147 @@ x = ft_df.longitude
 y = ft_df.latitude
 longrid = np.arange(-30, 15, 0.5)
 latgrid = np.arange(65, 85, 0.25)
-
+nmin = 20
 lon_c = 0.5*(longrid[1:] + longrid[:-1])
 lat_c = 0.5*(latgrid[1:] + latgrid[:-1])
 
-u_median, xedges, yedges, binnumber = stats.binned_statistic_2d(
-    x, y, values=ft_df.u, statistic='median', 
-    bins=[longrid, latgrid])
-v_median, xedges, yedges, binnumber = stats.binned_statistic_2d(
-    x, y, values=ft_df.v, statistic='median', 
-    bins=[longrid, latgrid])
-v_iqr, xedges, yedges, binnumber = stats.binned_statistic_2d(
-    x, y, values=ft_df.v, statistic=stats.iqr, 
-    bins=[longrid, latgrid])
-u_iqr, xedges, yedges, binnumber = stats.binned_statistic_2d(
-    x, y, values=ft_df.u, statistic=stats.iqr, 
-    bins=[longrid, latgrid])
-utot, xedges, yedges, binnumber = stats.binned_statistic_2d(
-    x, y, values=(ft_df.v**2 + ft_df.u**2)**0.5, statistic='median', 
-    bins=[longrid, latgrid])
-utot_iqr, xedges, yedges, binnumber = stats.binned_statistic_2d(
-    x, y, values=(ft_df.v**2 + ft_df.u**2)**0.5, statistic=stats.iqr, 
-    bins=[longrid, latgrid])
+# Estimate wind component
+model_alpha = 0.02
+model_theta = 20
+U_est = model_alpha * np.exp(1j*np.deg2rad(model_theta))*(ft_df['u_wind'] + 1j*ft_df['v_wind'])
+u_est = pd.Series(np.real(U_est), index=ft_df.index)
+v_est = pd.Series(np.imag(U_est), index=ft_df.index)
+ft_df['u_est'] = u_est
+ft_df['v_est'] = v_est
+ft_df['u_res'] = ft_df['u'] - ft_df['u_est']
+ft_df['v_res'] = ft_df['v'] - ft_df['v_est']
 
-
-
-u_median = pd.DataFrame(u_median, index=lon_c, columns=lat_c)
-v_median = pd.DataFrame(v_median, index=lon_c, columns=lat_c)
-u_iqr = pd.DataFrame(u_iqr, index=lon_c, columns=lat_c)
-v_iqr = pd.DataFrame(v_iqr, index=lon_c, columns=lat_c)
-utot = pd.DataFrame(utot, index=lon_c, columns=lat_c)
-utot_iqr = pd.DataFrame(utot_iqr, index=lon_c, columns=lat_c)
-
+# Variables:
+# N, u_median, v_median, wind_speed, u_res, v_res
 hist2d = np.histogram2d(ft_df['longitude'],
                ft_df['latitude'],
               bins=[longrid, latgrid])
-df_hist = pd.DataFrame(hist2d[0], index=lon_c, columns=lat_c)  
+df_hist = pd.DataFrame(hist2d[0], index=lon_c, columns=lat_c)
+
+sel = ft_df.wind_speed > 0
+u_median, xedges, yedges, binnumber = stats.binned_statistic_2d(
+    x[sel], y[sel], values=ft_df.u[sel], statistic='median', 
+    bins=[longrid, latgrid])
+v_median, xedges, yedges, binnumber = stats.binned_statistic_2d(
+    x[sel], y[sel], values=ft_df.v[sel], statistic='median', 
+    bins=[longrid, latgrid])
+wind_speed, xedges, yedges, binnumber = stats.binned_statistic_2d(
+    x[sel], y[sel], values=ft_df.wind_speed[sel], statistic='median', 
+    bins=[longrid, latgrid])
+u_res, xedges, yedges, binnumber = stats.binned_statistic_2d(
+    x[sel], y[sel], values=ft_df.u_res[sel], statistic='median', 
+    bins=[longrid, latgrid])
+v_res, xedges, yedges, binnumber = stats.binned_statistic_2d(
+    x[sel], y[sel], values=ft_df.v_res[sel], statistic='median', 
+    bins=[longrid, latgrid])
+speed_mad, xedges, yedges, binnumber = stats.binned_statistic_2d(
+    x[sel], y[sel], values=ft_df.speed[sel], statistic=stats.median_abs_deviation, 
+    bins=[longrid, latgrid])
+speed, xedges, yedges, binnumber = stats.binned_statistic_2d(
+    x[sel], y[sel], values=ft_df.speed[sel], statistic='median', 
+    bins=[longrid, latgrid])
+
+u_median = pd.DataFrame(u_median, index=lon_c, columns=lat_c)
+v_median = pd.DataFrame(v_median, index=lon_c, columns=lat_c)
+u_res = pd.DataFrame(u_res, index=lon_c, columns=lat_c)
+v_res = pd.DataFrame(v_res, index=lon_c, columns=lat_c)
+speed_mad = pd.DataFrame(speed_mad, index=lon_c, columns=lat_c)
+speed = pd.DataFrame(speed, index=lon_c, columns=lat_c)
+wind_speed = pd.DataFrame(wind_speed, index=lon_c, columns=lat_c)
+
+
+# Group variables for ease of plotting
+variables = {
+    'Observation Counts': {'data': df_hist.where(df_hist > 0),
+                           'vmin': 0,
+                           'vmax': 200,
+                           'clabel': 'N'},
+    'Drift Speed': {'data': speed.where(df_hist > nmin),
+                    'vmin': 0,
+                    'vmax': 0.2,
+                    'clabel': 'm/s'},
+    'Median Abs. Deviation': {'data': speed_mad.where(df_hist > nmin),
+                 'vmin': 0,
+                 'vmax': 0.2,
+                 'clabel': 'm/s'},
+    'Drift Velocity': {'data_u': u_median.where(df_hist > nmin),
+                        'data_v': v_median.where(df_hist > nmin),
+                        },
+    'Wind Speed': {'data': wind_speed.where(df_hist > nmin),
+                         'vmin': 0,
+                         'vmax': 10,
+                         'clabel': 'm/s'},
+    'U Residual': {'data': u_res.where(df_hist > nmin),
+                 'vmin': -0.15,
+                 'vmax': 0.15,
+                 'clabel': 'm/s'},
+    'V Residual': {'data': v_res.where(df_hist > nmin),
+                 'vmin': -0.15,
+                 'vmax': 0.15,
+                 'clabel': 'm/s'},
+    'Residual Velocity': {'data_u': u_res.where(df_hist > nmin),
+                           'data_v': v_res.where(df_hist > nmin),
+                          }}
+
 
 
 #### Plot Ice Floe Tracker maps
-nmin = 20
+
 pplt.rc.reso = 'med'
-fig, axs = pplt.subplots(proj='lcc', width=10, proj_kw={'lon_0': 0}, ncols=4, nrows=1, sharey=True)
-axs.format(land=True, latlim=(70,81), lonlim=(-30,10), facecolor='gray1', landzorder=10, lonlabels=True)
+
+# proj = {idx: proj='lcc', width=10, proj_kw={'lon_0': 0}}
+fig, axs = pplt.subplots(proj='lcc', width=10, proj_kw={'lon_0': 0}, ncols=4, nrows=3, share=False)
+axs.format(land=True, latlim=(70,81),
+           lonlim=(-30,10), facecolor='gray1', landzorder=10, lonlabels=True)
 for ax in axs:
     ax.contour(ds_depth.longitude,
                 ds_depth.latitude,
-                ds_depth.z, levels=np.arange(-3500, -1, 1000),
-           color='k', ls='-', labels=True, zorder=9, lw=1)
+                ds_depth.z, levels=[-1500,  -500, 0],
+           colors=['k', 'k', 'gray1'], ls='-', labels=True, zorder=5, lw=1)
     
-ax = axs[0,0]
-ax.format(latlabels=True)
-c = ax.pcolormesh(lon_c, lat_c, df_hist.where(df_hist>0).T, zorder=4, vmin=0, vmax=200, N=10,
-                  cmap='spectral_r', extend='max')
-ax.colorbar(c, label='N', loc='b')
-ax.format(title='Observation Counts', titlesize=10)
+for ax, variable in zip(axs, variables):
+    if 'Velocity' not in variable:
+        if variable in ['U Residual', 'V Residual']:
+            ex = 'both'
+            cmap = 'spectral_r'
+        else:
+            ex = 'max'
+            cmap = 'spectral_r'
+        df = variables[variable]['data']
+        ax.format(latlabels=True)
+        c = ax.pcolormesh(lon_c, lat_c, df.T, zorder=4,
+                          vmin=variables[variable]['vmin'],
+                          vmax=variables[variable]['vmax'], N=20,
+                          cmap=cmap, extend=ex)
+        ax.colorbar(c, label=variables[variable]['clabel'], loc='b')
+        ax.format(title=variable, titlesize=10)
+        
+    else:
+        u = variables[variable]['data_u']
+        v = variables[variable]['data_v']
+        ax.quiver(lon_c[::3], lat_c[::3],
+          u.T.loc[::3, ::3],
+          v.T.loc[::3, ::3],
+          zorder=10, scale=1, width=2/500, headwidth=7, headlength=5, color='r')
+        ax.format(title=variable, titlesize=10)
 
-
-ax = axs[0,1]
-c = ax.pcolormesh(lon_c, lat_c, utot.where(df_hist>nmin).T, zorder=4, vmin=0, vmax=0.2, N=10,
-                  cmap='spectral_r', extend='max')
-ax.colorbar(c, label='U (m/s)', loc='b')
-ax.format(title='Drift Speed', titlesize=10)
-
-
-ax = axs[0,2]
-ax.quiver(lon_c[::2], lat_c[::2],
-          u_median.where(df_hist > nmin).T.loc[::2, ::2],
-          v_median.where(df_hist > nmin).T.loc[::2, ::2],
-          zorder=10, scale=3, headwidth=10, headlength=5, color='r')
-
-ax.quiver(5, 71, 0.2, 0,
-          zorder=10, scale=3, color='r')
-ax.text(5, 71.5, '0.2 m/s', color='r', fontsize=5, transform=ccrs.PlateCarree())
-ax.format(title='Drift Direction', titlesize=10)
-
-ax = axs[0,3]
-c = ax.pcolormesh(lon_c, lat_c, utot_iqr.where(df_hist>nmin).T, zorder=4, vmin=0, vmax=0.15, N=10,
-                  cmap='spectral_r', extend='max')
-ax.colorbar(c, title='$U_{IQR} + V_{IQR}$ (m/s)', loc='b')
-ax.format(title='Drift Speed Total IQR', titlesize=10)
-fig.save('../figures/figure3_abcd.png', dpi=300)
+# ax.format(latlabels=True)
+for ax in [axs[0,-1], axs[1,-1]]:
+    ax.quiver(1, 70.75, 0.2, 0,
+          zorder=10, scale=1, width=2/500, headwidth=7, headlength=5, color='r')
+    ax.text(1, 71, '20 cm/s', color='r', fontsize=8, transform=ccrs.PlateCarree())
+# fig.save('../figures/figure3_abcd.png', dpi=300)
 
 
 ### Plot histograms
-from metpy.units import units
-import metpy.calc as mcalc
 
-fig, ax = pplt.subplots(ncols=4, share=False)
+# fig, ax = pplt.subplots(ncols=4, share=False)
+ax = fig.add_subplots(341)
 x = ax[0].hist2d(ft_df['wind_speed'], ft_df['turning_angle'], bins=[np.linspace(0, 15, 50),
                                       np.linspace(-180, 180, 50)],
          cmap='spectral_r')
@@ -155,8 +208,8 @@ x = ax[1].hist2d(ft_df['wind_speed'], ft_df['drift_speed_ratio'], bins=[np.linsp
                                       np.linspace(0, 0.2, 100)],
          cmap='spectral_r')
 ax[0].axhline(0, color='k', lw=0.5)
-ax[0].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='Ice Floe Tracker')
-ax[1].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='Ice Floe Tracker')
+# ax[0].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='Ice Floe Tracker')
+# ax[1].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='Ice Floe Tracker')
 
 
 x = ax[2].hist2d(buoy_df['wind_speed'], buoy_df['turning_angle'], bins=[np.linspace(0, 15, 50),
@@ -166,6 +219,7 @@ x = ax[2].hist2d(buoy_df['wind_speed'], buoy_df['turning_angle'], bins=[np.linsp
 x = ax[3].hist2d(buoy_df['wind_speed'], buoy_df['drift_speed_ratio'], bins=[np.linspace(0, 15, 50),
                                       np.linspace(0, 0.2, 50)], density=True, cmap='spectral_r')
 ax[2].axhline(0, color='k', lw=0.5)
-ax[2].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='MOSAiC')
-ax[3].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='MOSAiC')
-fig.save('../figures/figure3_efgh.png', dpi=300)
+# ax[2].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='MOSAiC')
+# ax[3].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='MOSAiC')
+fig.format(abc=True)
+fig.save('../figures/figure3.png', dpi=300)

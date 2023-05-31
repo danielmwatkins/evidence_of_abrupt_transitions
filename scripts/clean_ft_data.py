@@ -97,7 +97,7 @@ ft_df_raw.index.names = ['year', 'd1']
 ft_df_raw = ft_df_raw.reset_index().drop(['d1'], axis=1)
 ft_df_raw['floe_id'] = [str(y) + '_' + str(fi) for y, fi in zip(ft_df_raw['year'], ft_df_raw['floe_id'])]
 ft_df_raw['date'] = pd.to_datetime(ft_df_raw['datetime'].values)
-
+print('Number of observations:', len(ft_df_raw))
 
 floe_tracker_results = {}
 
@@ -134,7 +134,7 @@ for year, year_group in ft_df_raw.groupby(ft_df_raw.date.dt.year):
     floe_tracker_results[year].to_csv(saveloc + '/floe_tracker_interp_' + str(year) + '.csv')
     
 ft_df = pd.concat(floe_tracker_results)
-ft_df = ft_df.loc[ft_df.speed > 0.02]
+ft_df = ft_df.loc[(ft_df.speed > 0.02) & (ft_df.speed < 1.5)]
 ft_df['wind_speed'] = (ft_df['u_wind']**2 + ft_df['v_wind']**2)**0.5
 
 wind_bearing = mcalc.wind_direction(ft_df['u_wind'].values * units('m/s'),
@@ -145,5 +145,8 @@ delta = np.deg2rad(ice_bearing.magnitude) - np.deg2rad(wind_bearing.magnitude)
 ft_df['turning_angle'] = pd.Series(np.rad2deg(np.arctan2(np.sin(delta), np.cos(delta))), index=ft_df.index)
 
 ft_df['drift_speed_ratio'] = ft_df['speed'] / ft_df['wind_speed']
-
+length = ft_df.groupby('floe_id').apply(lambda x: len(x))
+print('Number of distinct floes:', len(length))
+print('Number of velocity estimates:', len(ft_df))
+print('Median trajectory length:', length.median())
 ft_df.to_csv(saveloc_single + 'ft_with_wind.csv')

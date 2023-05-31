@@ -131,8 +131,9 @@ all_positions_hourly.reset_index(drop=True, inplace=True)
 
 all_positions_daily = []
 for buoy in buoy_data:
-    df = buoy_data[buoy].loc[:, ['longitude', 'latitude']].resample('1D').median()
-    df = compute_velocity(df, rotate_uv=True, method='f')
+    df = buoy_data[buoy].loc[:, ['longitude', 'latitude']]
+    df = df.loc[df.index.hour == 12].copy()
+    df = compute_velocity(df, rotate_uv=True, method='c')
     df.reset_index(inplace=True)
     df['buoy'] = buoy
     all_positions_daily.append(df.loc[:, ['buoy', 'datetime', 'longitude', 'latitude',
@@ -179,8 +180,8 @@ for buoy, group in all_positions_daily.groupby('buoy'):
 for buoy, group in all_positions_hourly.groupby('buoy'):
     buoy_df = group.set_index('datetime')
     sic = buoy_data_daily[buoy].sea_ice_concentration
-    if np.any(sic < 1):
-        last = sic[sic < 1].index[0]
+    if np.any(sic < 15):
+        last = sic[sic < 15].index[0]
     else:
         last = sic.index[-1]
     ts = slice('2020-05-01', last)

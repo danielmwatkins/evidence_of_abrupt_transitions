@@ -23,6 +23,8 @@ buoy_data = {f.split('.')[0]: pd.read_csv(dataloc + f,
 extended_dn = ['2020P160', '2019P123', '2019P155', '2019P156',
                '2019P157', '2019P182', '2019P127', '2019P128',
                 '2019P184']
+
+ts = slice(pd.to_datetime('2020-05-01 00:00'), pd.to_datetime('2020-09-01 00:00'))
 dn = [b for b in buoy_data if b not in extended_dn]
 dn = [b for b in dn if buoy_data[b].latitude.max() < 85]
 
@@ -33,10 +35,10 @@ buoy_data = {buoy: buoy_data[buoy] for buoy in buoy_data if (buoy in dn) & (len(
 # Ratios are computed after taking the centered 12 hour median so that 
 # inertial oscillations are removed
 
-dfu = pd.DataFrame({b: buoy_data[b]['u'] for b in buoy_data}).rolling('12H',center=True).median()
-dfv = pd.DataFrame({b: buoy_data[b]['v'] for b in buoy_data}).rolling('12H',center=True).median()
-dfuw = pd.DataFrame({b: buoy_data[b]['u_wind'] for b in buoy_data}).rolling('12H',center=True).median()
-dfvw = pd.DataFrame({b: buoy_data[b]['v_wind'] for b in buoy_data}).rolling('12H',center=True).median()
+dfu = pd.DataFrame({b: buoy_data[b]['u'] for b in buoy_data}).rolling('12H',center=True).median().loc[ts]
+dfv = pd.DataFrame({b: buoy_data[b]['v'] for b in buoy_data}).rolling('12H',center=True).median().loc[ts]
+dfuw = pd.DataFrame({b: buoy_data[b]['u_wind'] for b in buoy_data}).rolling('12H',center=True).median().loc[ts]
+dfvw = pd.DataFrame({b: buoy_data[b]['v_wind'] for b in buoy_data}).rolling('12H',center=True).median().loc[ts]
 
 differences = {}
 for buoy in dfu.columns:
@@ -67,21 +69,20 @@ for buoy in buoy_data:
     v = dfv[buoy]
     uw = dfuw[buoy]
     vw = dfvw[buoy]
-    U_est = model_alpha * np.exp(1j*np.deg2rad(model_theta))*(uw + 1j*vw)
+    U_est = model_alpha * np.exp(-1j*np.deg2rad(model_theta))*(uw + 1j*vw)
     u_est = pd.Series(np.real(U_est), index=u.index)
     v_est = pd.Series(np.imag(U_est), index=u.index)
     buoy_data[buoy]['u_est'] = u_est
     buoy_data[buoy]['v_est'] = v_est
     buoy_data[buoy]['speed_est'] = np.abs(U_est)
-     
-    
+
 fig, axs = pplt.subplots(width=7, height=5, nrows=4,
                          sharey=False, hspace=0)
 ### Panel b: Ensemble drift speed ratio
 idx = 0
-u_est = get_df('speed_est')
-u_median = get_df('speed')
-resid = pd.DataFrame({buoy: u_est[buoy] - u_median[buoy] for buoy in u_est.columns})
+u_est = get_df('speed_est').loc[ts]
+u_median = get_df('speed').loc[ts]
+resid = pd.DataFrame({buoy: u_median[buoy]- u_est[buoy]  for buoy in u_est.columns})
 
 u_est = u_est.resample('1D').median()
 u_median = u_median.resample('1D').median()
@@ -112,7 +113,7 @@ axs[idx].plot(resid.median(axis=1),
                    resid.quantile(0.1, axis=1)],
         color='tab:gray'
  )
-axs[idx].format(ylabel='$\overline{U}_{est} - \overline{U}$ (m/s)',ylim=(-0.35, 0.35), titlepad=1,
+axs[idx].format(ylabel='$\overline{U} - \overline{U}_{est}$ (m/s)',ylim=(-0.35, 0.35), titlepad=1,
                 ultitle='Error in drift speed magnitude',
           titlecolor='k',
           xticks=[], ytickminor=False)
