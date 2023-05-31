@@ -88,9 +88,29 @@ def era5_uv_along_track(position_data, uv_data):
 
 ft_df_raw = {}
 for year in range(2003, 2021):
-    ft_df_raw[year] = pd.read_csv(
+    df = pd.read_csv(
         dataloc + 'floe_tracker_raw_' + str(year) + '.csv',
         index_col=None).dropna()
+    
+    if year == 2020:
+        # The images from 2020 are stretched in the y direction. This is a simple fix 
+        # that gets them pretty close to correct.
+        left=200703.99999999994
+        bottom=-2009088.0
+        right=1093632.0
+        top=-317440.0
+        adjustment = 63.8e3
+        A = ((top - bottom) + adjustment)/(top - bottom)
+        B = top * (1 - A)
+        df['y'] = A*df['y'] + B
+        source_crs = 'epsg:3413'
+        to_crs = 'WGS84'
+        ps2ll = pyproj.Transformer.from_crs(source_crs, to_crs, always_xy=True)
+        lon, lat = ps2ll.transform(df['x'], df['y'])
+
+        df['longitude'] = np.round(lon, 5)
+        df['latitude'] = np.round(lat, 5)
+    ft_df_raw[year] = df
     
 ft_df_raw = pd.concat(ft_df_raw)
 ft_df_raw.index.names = ['year', 'd1']

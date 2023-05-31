@@ -33,7 +33,7 @@ buoy_data_hourly = {f.split('.')[0]: pd.read_csv(dataloc + f,
 
 buoy_df = pd.concat(buoy_data).reset_index().drop('level_0', axis=1)
 buoy_df = buoy_df.loc[buoy_df['datetime'] > pd.to_datetime('2020-07-13 00:00')].dropna()
-
+buoy_df['datetime'] -= pd.to_timedelta('12H')
 buoy_df_hourly = pd.concat(buoy_data_hourly).reset_index().drop('buoy', axis=1)
 buoy_df_hourly.rename({'level_0': 'buoy'}, axis=1, inplace=True)
 buoy_df_hourly = buoy_df_hourly.loc[buoy_df_hourly['datetime'] > pd.to_datetime('2020-07-13 00:00')].dropna()
@@ -152,9 +152,9 @@ variables = {
 pplt.rc.reso = 'med'
 
 # proj = {idx: proj='lcc', width=10, proj_kw={'lon_0': 0}}
-fig, axs = pplt.subplots(proj='lcc', width=10, proj_kw={'lon_0': 0}, ncols=4, nrows=3, share=False)
+fig, axs = pplt.subplots(proj='lcc', width=10, proj_kw={'lon_0': 0}, ncols=4, nrows=2, share=False)
 axs.format(land=True, latlim=(70,81),
-           lonlim=(-30,10), facecolor='gray1', landzorder=10, lonlabels=True)
+           lonlim=(-30,10), facecolor='gray1', landzorder=10, lonlabels=True, abc=True)
 for ax in axs:
     ax.contour(ds_depth.longitude,
                 ds_depth.latitude,
@@ -192,13 +192,12 @@ for ax in [axs[0,-1], axs[1,-1]]:
     ax.quiver(1, 70.75, 0.2, 0,
           zorder=10, scale=1, width=2/500, headwidth=7, headlength=5, color='r')
     ax.text(1, 71, '20 cm/s', color='r', fontsize=8, transform=ccrs.PlateCarree())
-# fig.save('../figures/figure3_abcd.png', dpi=300)
+fig.save('../figures/figure3_abcdefgh.png', dpi=300)
 
 
 ### Plot histograms
-
-# fig, ax = pplt.subplots(ncols=4, share=False)
-ax = fig.add_subplots(341)
+fig, ax = pplt.subplots(ncols=4, share=False)
+# ax = fig.add_subplots(341)
 x = ax[0].hist2d(ft_df['wind_speed'], ft_df['turning_angle'], bins=[np.linspace(0, 15, 50),
                                       np.linspace(-180, 180, 50)],
          cmap='spectral_r')
@@ -208,18 +207,17 @@ x = ax[1].hist2d(ft_df['wind_speed'], ft_df['drift_speed_ratio'], bins=[np.linsp
                                       np.linspace(0, 0.2, 100)],
          cmap='spectral_r')
 ax[0].axhline(0, color='k', lw=0.5)
-# ax[0].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='Ice Floe Tracker')
-# ax[1].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='Ice Floe Tracker')
-
-
+ax[0].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='Ice Floe Tracker')
+ax[1].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='Ice Floe Tracker')
 x = ax[2].hist2d(buoy_df['wind_speed'], buoy_df['turning_angle'], bins=[np.linspace(0, 15, 50),
                                       np.linspace(-180, 180, 50)], density=True, cmap='spectral_r')
-
 
 x = ax[3].hist2d(buoy_df['wind_speed'], buoy_df['drift_speed_ratio'], bins=[np.linspace(0, 15, 50),
                                       np.linspace(0, 0.2, 50)], density=True, cmap='spectral_r')
 ax[2].axhline(0, color='k', lw=0.5)
-# ax[2].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='MOSAiC')
-# ax[3].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='MOSAiC')
-fig.format(abc=True)
-fig.save('../figures/figure3.png', dpi=300)
+ax[2].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='MOSAiC')
+ax[3].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='MOSAiC')
+fig.format(abc=False)
+fig.save('../figures/figure3_ijk.png', dpi=300)
+
+print(buoy_df.info())
