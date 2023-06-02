@@ -217,7 +217,7 @@ x = ax[3].hist2d(buoy_df['wind_speed'], buoy_df['drift_speed_ratio'], bins=[np.l
 ax[2].axhline(0, color='k', lw=0.5)
 ax[2].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='MOSAiC')
 ax[3].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='MOSAiC')
-fig.format(abc=False)
+fig.format(abc=False, fontsize=12)
 fig.save('../figures/figure3_ijk.png', dpi=300)
 
 print(buoy_df.info())
