@@ -11,13 +11,16 @@ External datasets needed:
 - IBCAO_v4_2_400m.nc
 - AMSR2 25 km sea ice concentration
 - ERA5 hourly u10, v10 for the region bounded by 60-90 latitude and -30 to 30 longitude
+- ERA5 daily averages of u10, v10 (code assumes timestamps at 12 UTC)
 
 # Data preparation
-1. `clean_buoy_data.py` Reads the MOSAiC buoy tracks downloaded from the Arctic Data Center, applies quality control, and resamples to hourly resolution. Requires drift tracks and metadata from the Arctic Data Center. Results saved to `data/interpolated_tracks'.
-2. `clean_ft_data.py` Reads the CSV files with IFT floe positions, interpolates to daily resolution, interpolates ERA5 daily wind speeds to floe positions, and computes turning angle and drift speed ratios relative to the wind speeds. Results saved to `data/floe_tracker/interpolated` and `data/floe_tracker/ft_with_wind.csv`.
-3. `compile_amsr2_data.py` Reads daily hd5 files from NSIDC and merges them to a netcdf file for the merge_data code to access.
-4. `merge_data.py` Interpolates sea ice concentration, depth, and ERA5 winds to the buoy positions. Ice concentration and depth are added to the daily positions, and wind is added to the hourly positions. Calculates drift velocity using forward differences for the daily positions and using centered differences for the hourly positions. Results saved to `data/daily_merged_buoy_data` and `data/hourly_merged_buoy_data`. 
-5. `prepare_bathymetry_for_plotting.py` Regrids the IBCAO bathymetry to lat/lon coordinates to make plotting easier.
+These scripts are included for transparency and to enable full reproducibility. The outputs are included in this archive, so the figures can be created without re-running the data preparation code.
+1. `clean_buoy_data.py` Reads the MOSAiC buoy tracks downloaded from the Arctic Data Center, applies quality control, and resamples to hourly resolution. Requires drift tracks and metadata from the Arctic Data Center. Results saved to `data/interpolated_tracks`. Requires download of tracks from Bliss et al. 2022 (DOI: 10.18739/A2KP7TS83)
+2. `parse_ift_data.py` Converts the matlab output in `data/floe_tracker/unparsed` into CSV files
+3. `clean_ft_data.py` Reads the CSV files with IFT floe positions, interpolates to daily resolution, interpolates ERA5 daily wind speeds to floe positions, and computes turning angle and drift speed ratios relative to the wind speeds. Results saved to `data/floe_tracker/interpolated` and `data/floe_tracker/ft_with_wind.csv`. Requires daily average ERA5 winds. 
+4. `compile_amsr2_data.py` Reads daily hd5 files from NSIDC and merges them to a netcdf file for the merge_data code to access. Requires 2020 AMSR2 data to be available (DOI: 10.5067/TRUIAL3WPAUP) 
+5. `merge_data.py` Interpolates sea ice concentration, depth, and ERA5 winds to the buoy positions. Ice concentration and depth are added to the daily positions, and wind is added to the hourly positions. Calculates drift velocity using forward differences for the daily positions and using centered differences for the hourly positions. Results saved to `data/daily_merged_buoy_data` and `data/hourly_merged_buoy_data`. Requires hourly ERA5 winds.
+5. `prepare_bathymetry_for_plotting.py` Regrids the IBCAO bathymetry to lat/lon coordinates to make plotting easier. Requires 
 6. `calculate_spectra.py` Uses the PyCurrents spectrum function to calculate the rotary power spectral densities and saves the results in `data/spectra`.
 7. `calculate_tidal_fit.py` Applies the harmonic regression model to the buoy drift track anomalies, and saves the predicted positions, maximum daily currents, and the squared correlation coefficients to `data/harmonic_fit`.
 
