@@ -29,11 +29,11 @@ buoy_data = {f.split('.')[0]: pd.read_csv(dataloc + f,
 dataloc = '../data/hourly_merged_buoy_data/'
 files = os.listdir(dataloc)
 buoy_data_hourly = {f.split('.')[0]: pd.read_csv(dataloc + f,
-                 parse_dates=True, index_col=0).resample('1D').mean() for f in files if f.split('.')[1] == 'csv'}
+                 parse_dates=True, index_col=0).resample('1D', loffset=pd.to_timedelta('12H')).mean() for f in files if f.split('.')[1] == 'csv'}
 
 buoy_df = pd.concat(buoy_data).reset_index().drop('level_0', axis=1)
 buoy_df = buoy_df.loc[buoy_df['datetime'] > pd.to_datetime('2020-07-13 00:00')].dropna()
-buoy_df['datetime'] -= pd.to_timedelta('12H')
+# buoy_df['datetime'] -= pd.to_timedelta('12H')
 buoy_df_hourly = pd.concat(buoy_data_hourly).reset_index().drop('buoy', axis=1)
 buoy_df_hourly.rename({'level_0': 'buoy'}, axis=1, inplace=True)
 buoy_df_hourly = buoy_df_hourly.loc[buoy_df_hourly['datetime'] > pd.to_datetime('2020-07-13 00:00')].dropna()
@@ -207,8 +207,8 @@ x = ax[1].hist2d(ft_df['wind_speed'], ft_df['drift_speed_ratio'], bins=[np.linsp
                                       np.linspace(0, 0.2, 100)],
          cmap='spectral_r')
 ax[0].axhline(0, color='k', lw=0.5)
-ax[0].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='Ice Floe Tracker', labelsize=12)
-ax[1].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='Ice Floe Tracker', labelsize=12)
+ax[0].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$', title='Ice Floe Tracker', labelsize=12, titlesize=10)
+ax[1].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='Ice Floe Tracker', labelsize=12, titlesize=10)
 x = ax[2].hist2d(buoy_df['wind_speed'], buoy_df['turning_angle'], bins=[np.linspace(0, 15, 50),
                                       np.linspace(-180, 180, 50)], density=True, cmap='spectral_r')
 
@@ -216,8 +216,9 @@ x = ax[3].hist2d(buoy_df['wind_speed'], buoy_df['drift_speed_ratio'], bins=[np.l
                                       np.linspace(0, 0.2, 50)], density=True, cmap='spectral_r')
 ax[2].axhline(0, color='k', lw=0.5)
 ax[2].format(ylabel='Turning Angle ($\\Theta$)', xlabel='$U_{wind}$',
-             title='MOSAiC', labelsize=12)
-ax[3].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='MOSAiC', labelsize=12)
+             title='MOSAiC', labelsize=12, titlesize=10)
+ax[3].format(ylabel='Drift Speed Ratio ($\\alpha$)', xlabel='$U_{wind}$', title='MOSAiC',
+             labelsize=12, titlesize=10)
 fig.format(abc=False)
 fig.save('../figures/figure3_ijk.png', dpi=300)
 
