@@ -3,7 +3,9 @@ and adds ERA5 winds. Results for individual years are saved in data/floe_tracker
 and a single dataframe with wind speed, drift speed ratio, and turning angle for all
 the years are saved in data/floe_tracker.
 
-TBD: reduce file size by decreasing the number of saved significant figures
+The full files are saved within the floe_tracker/interpolated files. For the analysis, we
+apply a filter requiring the ice drift speed to be at least 0.02 m/s and less than 1.5 m/s.
+The filtered data is saved as a single CSV file in data/floe_tracker/ft_with_wind.csv.
 """
 
 import numpy as np
@@ -92,25 +94,6 @@ for year in range(2003, 2021):
     df = pd.read_csv(
         dataloc + 'floe_tracker_raw_' + str(year) + '.csv',
         index_col=None).dropna()
-    
-#     if year == 2020:
-#         # The images from 2020 are stretched in the y direction. This is a simple fix 
-#         # that gets them pretty close to correct.
-#         left=200703.99999999994
-#         bottom=-2009088.0
-#         right=1093632.0
-#         top=-317440.0
-#         adjustment = 63.8e3
-#         A = ((top - bottom) + adjustment)/(top - bottom)
-#         B = top * (1 - A)
-#         df['y'] = A*df['y'] + B
-#         source_crs = 'epsg:3413'
-#         to_crs = 'WGS84'
-#         ps2ll = pyproj.Transformer.from_crs(source_crs, to_crs, always_xy=True)
-#         lon, lat = ps2ll.transform(df['x'], df['y'])
-
-#         df['longitude'] = np.round(lon, 5)
-#         df['latitude'] = np.round(lat, 5)
     ft_df_raw[year] = df
     
 ft_df_raw = pd.concat(ft_df_raw)
@@ -140,7 +123,8 @@ for year, year_group in ft_df_raw.groupby(ft_df_raw.date.dt.year):
     floe_tracker_results[year] = pd.concat(results)
     floe_tracker_results[year].index.names = ['floe_id', 'date']
     floe_tracker_results[year].reset_index(inplace=True)
-    floe_tracker_results[year] = floe_tracker_results[year].loc[:, ['date', 'floe_id', 'x', 'y', 'longitude', 'latitude']]
+    floe_tracker_results[year] = floe_tracker_results[year].loc[:,
+                                          ['date', 'floe_id', 'x', 'y', 'longitude', 'latitude']]
     
     floe_tracker_results[year] = floe_tracker_results[year].groupby('floe_id', group_keys=False).apply(
         compute_velocity, date_index=False, rotate_uv=True, method='f').dropna()
@@ -164,6 +148,7 @@ ft_df['wind_speed'] = (ft_df['u_wind']**2 + ft_df['v_wind']**2)**0.5
 
 wind_bearing = mcalc.wind_direction(ft_df['u_wind'].values * units('m/s'),
                  ft_df['v_wind'].values * units('m/s'), convention='to')
+ft_df['wind_bearing'] = wind_bearing.magnitude
 ice_bearing = mcalc.wind_direction(ft_df['u'].values * units('m/s'),
                  ft_df['v'].values * units('m/s'), convention='to')
 delta = np.deg2rad(ice_bearing.magnitude) - np.deg2rad(wind_bearing.magnitude)

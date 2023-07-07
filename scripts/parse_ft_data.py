@@ -15,7 +15,7 @@ from scipy.interpolate import interp1d
 from scipy.io import loadmat
 
 saveloc = '../data/floe_tracker/parsed/'
-dataloc = '../../data/floe_tracker_data/' 
+dataloc = '../data/floe_tracker/unparsed/' 
 
 for year in range(2003, 2021):
     X1 = loadmat(dataloc + str(year) + '/tracked/x3.mat')['x2']
@@ -100,8 +100,7 @@ for year in range(2003, 2021):
     
     
     if year == 2020:
-        # The images from 2020 are stretched in the y direction. This is a simple fix 
-        # that gets them pretty close to correct.
+        # The images from 2020 are stretched in the y direction. This applies a linear correction.
         left=200703.99999999994
         bottom=-2009088.0
         right=1093632.0
