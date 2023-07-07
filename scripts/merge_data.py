@@ -19,7 +19,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 drift_tracks_loc = '../data/interpolated_tracks/'
 sic_loc = '../external_data/amsr2_sea_ice_concentration.nc'
 depth_loc = '../external_data/IBCAO_v4_2_400m.nc' 
-era5_loc = '../external_data/era5_winds.nc'
+era5_loc = '../external_data/era5_winds_hourly.nc'
 save_loc = '../data/'
 
 # Only load spring/summer data

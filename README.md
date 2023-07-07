@@ -1,5 +1,5 @@
 # Introduction
-This repository contains the code and data used for the paper "Evidence of abrupt transitions between sea ice dynamical regimes in the East Greenland marginal ice zone" by Watkins et al. This initial version contains all the code necessary to reproduce the results in the paper, *provided all the external datasets have been downloaded*. So that it is possible to review the analysis of the paper, I have separated the python scripts into code needed to prepare the data for analysis, and code needed to create the figures. The figure generation code can be run using only the data files provided in the repository. In a future version of the repository, more detailed instructions for obtaining the external datasets will be provided.
+This repository contains the code and data used for the paper "Evidence of abrupt transitions between sea ice dynamical regimes in the East Greenland marginal ice zone" by Watkins et al. This initial version contains all the code necessary to reproduce the results in the paper, *provided all the external datasets have been downloaded*. So that it is possible to review the analysis of the paper, I have separated the python scripts into code needed to prepare the data for analysis, and code needed to create the figures. The figure generation code can be run using only the data files provided in the repository. 
 
 # Setup
 The files environment.yml and environment-tidal.yml provide the list of package versions used to run the script. After installing miniconda (instructions: https://docs.conda.io/en/latest/miniconda.html) create the miz_dynamics environment via
@@ -14,7 +14,6 @@ External datasets needed:
 - ERA5 daily averages of u10, v10 (code assumes timestamps at 12 UTC)
 
 # Data preparation
-These scripts are included for transparency and to enable full reproducibility. The outputs are included in this archive, so the figures can be created without re-running the data preparation code.
 1. `clean_buoy_data.py` Reads the MOSAiC buoy tracks downloaded from the Arctic Data Center, applies quality control, and resamples to hourly resolution. Requires drift tracks and metadata from the Arctic Data Center. Results saved to `data/interpolated_tracks`. Requires download of tracks from Bliss et al. 2022 (DOI: 10.18739/A2KP7TS83)
 2. `parse_ift_data.py` Converts the matlab output in `data/floe_tracker/unparsed` into CSV files
 3. `clean_ft_data.py` Reads the CSV files with IFT floe positions, interpolates to daily resolution, interpolates ERA5 daily wind speeds to floe positions, and computes turning angle and drift speed ratios relative to the wind speeds. Results saved to `data/floe_tracker/interpolated` and `data/floe_tracker/ft_with_wind.csv`. Requires daily average ERA5 winds. 
